@@ -1,0 +1,126 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a player in the platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "location": { "type": "string" },
+        "country": { "type": "string" },
+        "countryCode": { "type": "string" },
+        "lastIP": { "type": "string" },
+        "verified": { "type": "boolean", "default": false },
+        "role": { "type": "string", "enum": ["user", "admin", "owner"], "default": "user" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "reputation": { "type": "number", "default": 0 },
+        "level": { "type": "string", "default": "Novice" },
+        "tradeCount": { "type": "number", "default": 0 }
+      },
+      "required": ["uid", "email", "displayName"]
+    },
+    "Rating": {
+      "title": "Rating",
+      "description": "A feedback given by one user to another.",
+      "type": "object",
+      "properties": {
+        "targetId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "score": { "type": "number", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetId", "authorId", "score"]
+    },
+    "Trade": {
+      "title": "Trade",
+      "description": "A trade offer posted by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "haveItem": { "type": "string" },
+        "wantItem": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "imageUrl": { "type": "string" },
+        "likes": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "required": ["title", "haveItem", "wantItem", "authorId", "status"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A chat session between two users.",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastSenderId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "unreadCount": { "type": "object" }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single message in a conversation.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["senderId", "text", "createdAt"]
+    },
+    "SupportMessage": {
+      "title": "SupportMessage",
+      "description": "A message between a user and the platform admin.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderEmail": { "type": "string" },
+        "threadId": { "type": "string" },
+        "text": { "type": "string" },
+        "isAdminReply": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["new", "read"] }
+      },
+      "required": ["senderId", "threadId", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public profile and private settings for a user."
+    },
+    "/support_messages/{msgId}": {
+      "schema": "SupportMessage",
+      "description": "Direct communication with the platform owner."
+    },
+    "/trades/{tradeId}": {
+      "schema": "Trade",
+      "description": "Public trade offers."
+    },
+    "/conversations/{convId}": {
+      "schema": "Conversation",
+      "description": "Chat conversations."
+    },
+    "/conversations/{convId}/messages/{msgId}": {
+      "schema": "Message",
+      "description": "Messages within a conversation."
+    },
+    "/ratings/{ratingId}": {
+      "schema": "Rating",
+      "description": "Feedback and scores between users."
+    }
+  }
+}

@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Admin check: Based on specific email or role in user doc
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == 'iliassilias19@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'owner']
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validations ---
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid 
+        && data.displayName is string 
+        && (!('role' in data) || data.role in ['user', 'admin', 'owner']);
+    }
+
+    // --- Match Blocks ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isAdmin() || (
+        isSignedIn() && (
+          (isOwner(userId) && 
+           incoming().diff(existing()).affectedKeys().hasAny(['facebookPage', 'facebookGroup', 'displayName', 'photoURL', 'bio', 'location', 'country', 'countryCode', 'hasMetadata', 'updatedAt', 'gender'])) ||
+          (incoming().diff(existing()).affectedKeys().hasAny(['reputation', 'level', 'completedTrades']))
+        )
+      );
+      allow delete: if isAdmin();
+
+      match /private/{docId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /trades/{tradeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && (
+        (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasAny(['title', 'description', 'haveItem', 'wantItem', 'imageUrl', 'status', 'authorConfirmed'])) ||
+        (incoming().diff(existing()).affectedKeys().hasAny(['offererConfirmed', 'offererId', 'status'])) ||
+        (incoming().diff(existing()).affectedKeys().hasAny(['likes']))
+      ));
+      allow delete: if isAdmin() || (isSignedIn() && isOwner(existing().authorId));
+    }
+
+    match /support_messages/{msgId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.threadId == request.auth.uid);
+      allow create: if isSignedIn() && (
+        (incoming().threadId == request.auth.uid && incoming().isAdminReply == false) ||
+        isAdmin()
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.threadId == request.auth.uid);
+    }
+
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.participants);
+      
+      match /messages/{msgId} {
+        allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow create: if isSignedIn() && incoming().senderId == request.auth.uid;
+        allow delete: if isAdmin() || (isSignedIn() && (resource.data.senderId == request.auth.uid));
+      }
+    }
+
+    match /ratings/{ratingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+      allow delete: if isAdmin() || (isSignedIn() && (isOwner(existing().authorId) || isOwner(existing().targetId)));
+    }
+
+    match /blocked_ips/{ipId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /blocked_countries/{countryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

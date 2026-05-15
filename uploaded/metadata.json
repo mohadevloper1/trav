@@ -1,0 +1,8 @@
+{
+  "name": "GameZone",
+  "description": "Tactical social marketplace for gaming assets. Swap center, reputation tracking, and secure chat protocols active.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
