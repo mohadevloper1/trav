@@ -519,7 +519,6 @@ const ViewProfile = () => {
       </AnimatePresence>
     </div>
   </div>
-</>
 );
 };
 
